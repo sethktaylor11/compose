@@ -5,8 +5,8 @@ set -ex
 ./script/clean
 
 TAG="docker-compose"
-docker build -t "$TAG" . | tail -n 200
-docker run \
+sudo docker build -t "$TAG" . | tail -n 200
+sudo docker run \
     --rm --entrypoint="script/build/linux-entrypoint" \
     -v $(pwd)/dist:/code/dist \
     -v $(pwd)/.git:/code/.git \
