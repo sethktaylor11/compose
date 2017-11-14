@@ -175,7 +175,7 @@ class ServiceTest(unittest.TestCase):
             external_links=['default_foo_1']
         )
         with self.assertRaises(DependencyError):
-            service.get_container_name(1)
+            service.get_container_name('foo', 1)
 
     def test_mem_reservation(self):
         self.mock_client.create_host_config.return_value = {}
@@ -498,6 +498,7 @@ class ServiceTest(unittest.TestCase):
             network_mode=None,
             target=None,
             shmsize=None,
+            extra_hosts=None,
         )
 
     def test_ensure_image_exists_no_build(self):
@@ -538,7 +539,8 @@ class ServiceTest(unittest.TestCase):
             cache_from=None,
             network_mode=None,
             target=None,
-            shmsize=None
+            shmsize=None,
+            extra_hosts=None,
         )
 
     def test_build_does_not_pull(self):
