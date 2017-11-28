@@ -886,6 +886,8 @@ class Service(object):
             device_read_iops=blkio_config.get('device_read_iops'),
             device_write_bps=blkio_config.get('device_write_bps'),
             device_write_iops=blkio_config.get('device_write_iops'),
+            cpu_rt_period=options.get('cpu_rt_period'),
+            cpu_rt_runtime=options.get('cpu_rt_runtime'),
         )
 
     def get_secret_volumes(self):
