@@ -1830,6 +1830,18 @@ class CLITestCase(DockerClientTestCase):
         assert 'FOO=bar' in environment
         assert 'BAR=baz' not in environment
 
+    def test_run_cpu_rt_period(self):
+        self.base_dir = 'tests/fixtures/run-cpu-rt-period-composefile'
+        name = 'service'
+        # time = '1000'
+        self.dispatch(['run', name, '/bin/true'], returncode=1)
+        service = self.project.get_service(name)
+        print(service)
+        # container =
+        print(service.containers(one_off=OneOffFilter.only, stopped=True))
+        # assert container.get('HostConfig.CPURealtimePeriod') == time
+        assert False
+
     def test_rm(self):
         service = self.project.get_service('simple')
         service.create_container()

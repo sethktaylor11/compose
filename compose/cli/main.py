@@ -1120,10 +1120,10 @@ def build_container_options(options, detach, command):
     }
 
     if options['--cpu-rt-period']:
-        container_options['cpu_rt_period'] = options.get('--cpu-rt-period') 
+        container_options['cpu_rt_period'] = options.get('--cpu-rt-period')
 
-    if options['--cpu-rt-runtime']:
-        container_options['cpu_rt_runtime'] = options.get('--cpu-rt-runtime') 
+    # if options['--cpu-rt-runtime']:
+        # container_options['cpu_rt_runtime'] = options.get('--cpu-rt-runtime')
 
     if options['-e']:
         container_options['environment'] = Environment.from_command_line(
