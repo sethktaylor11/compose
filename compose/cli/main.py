@@ -726,7 +726,7 @@ class TopLevelCommand(object):
             -d                    Detached mode: Run container in the background, print
                                   new container name.
             --name NAME           Assign a name to the container
-            --cpu-rt-period NUM   Limit the the CPU real-time period. In microseconds.
+            --cpu-rt-period NUM   Limit the CPU real-time period. In microseconds.
             --cpu-rt-runtime NUM  Limit the CPU real-time runtime. In microseconds.
             --entrypoint CMD      Override the entrypoint of the image.
             -e KEY=VAL            Set an environment variable (can be used multiple times)
