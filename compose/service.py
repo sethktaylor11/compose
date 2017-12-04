@@ -59,6 +59,8 @@ HOST_CONFIG_KEYS = [
     'cpu_count',
     'cpu_percent',
     'cpu_quota',
+    'cpu_rt_period',
+    'cpu_rt_runtime',
     'cpu_shares',
     'cpus',
     'cpuset',

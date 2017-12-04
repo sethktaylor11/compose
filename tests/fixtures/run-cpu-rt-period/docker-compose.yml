@@ -1,0 +1,4 @@
+service:
+  image: busybox:latest
+  cpu_rt_period: 1000
+  command: id

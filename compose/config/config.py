@@ -117,6 +117,8 @@ ALLOWED_KEYS = DOCKER_CONFIG_KEYS + [
     'blkio_config',
     'build',
     'container_name',
+    'cpu_rt_period',
+    'cpu_rt_runtime',
     'credential_spec',
     'dockerfile',
     'log_driver',

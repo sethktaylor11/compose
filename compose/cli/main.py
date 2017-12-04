@@ -726,8 +726,6 @@ class TopLevelCommand(object):
             -d                    Detached mode: Run container in the background, print
                                   new container name.
             --name NAME           Assign a name to the container
-            --cpu-rt-period NUM   Limit the CPU real-time period. In microseconds.
-            --cpu-rt-runtime NUM  Limit the CPU real-time runtime. In microseconds.
             --entrypoint CMD      Override the entrypoint of the image.
             -e KEY=VAL            Set an environment variable (can be used multiple times)
             -u, --user=""         Run as specified username or uid
@@ -1118,12 +1116,6 @@ def build_container_options(options, detach, command):
         'stdin_open': not detach,
         'detach': detach,
     }
-
-    if options['--cpu-rt-period']:
-        container_options['cpu_rt_period'] = options.get('--cpu-rt-period')
-
-    # if options['--cpu-rt-runtime']:
-        # container_options['cpu_rt_runtime'] = options.get('--cpu-rt-runtime')
 
     if options['-e']:
         container_options['environment'] = Environment.from_command_line(

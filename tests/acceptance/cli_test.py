@@ -1831,23 +1831,23 @@ class CLITestCase(DockerClientTestCase):
         assert 'BAR=baz' not in environment
 
     def test_run_cpu_rt_period(self):
-        self.base_dir = 'tests/fixtures/run-cpu-rt-composefile'
+        self.base_dir = 'tests/fixtures/run-cpu-rt-period'
         name = 'service'
-        time = '1000'
-        self.dispatch(['run', '--cpu-rt-period', time, name, '/bin/true'], returncode=0)
+        # time = '1000'
+        self.dispatch(['run', name, '/bin/true'], returncode=0)
         service = self.project.get_service(name)
         container = service.containers(one_off=OneOffFilter.only, stopped=True)[0]
-        assert container.get('HostConfig.CPURealtimePeriod') == time
+        assert container.get('HostConfig.CPURealtimePeriod') == '1000'
         assert False
 
     def test_run_cpu_rt_runtime(self):
-        self.base_dir = 'tests/fixtures/run-cpu-rt-composefile'
+        self.base_dir = 'tests/fixtures/run-cpu-rt-runtime'
         name = 'service'
-        time = '1000'
-        self.dispatch(['run', '--cpu-rt-runtime', time, name, '/bin/true'], returncode=0)
+        # time = '1000'
+        self.dispatch(['run', name, '/bin/true'], returncode=0)
         service = self.project.get_service(name)
         container = service.containers(one_off=OneOffFilter.only, stopped=True)[0]
-        assert container.get('HostConfig.CPURealtimeRuntime') == time
+        assert container.get('HostConfig.CPURealtimeRuntime') == '1000'
         assert False
 
     def test_rm(self):
