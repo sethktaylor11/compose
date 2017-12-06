@@ -920,12 +920,14 @@ class TopLevelCommand(object):
                                        defined in the Compose file
             --exit-code-from SERVICE   Return the exit code of the selected service container.
                                        Implies --abort-on-container-exit.
+            --sequential-restart       Stop containers sequentially.
             --scale SERVICE=NUM        Scale SERVICE to NUM instances. Overrides the `scale`
                                        setting in the Compose file if present.
         """
         start_deps = not options['--no-deps']
         exit_value_from = exitval_from_opts(options, self.project)
         cascade_stop = options['--abort-on-container-exit']
+        sequential_restart = options['--sequential-restart']
         service_names = options['SERVICE']
         timeout = timeout_from_opts(options)
         remove_orphans = options['--remove-orphans']
@@ -953,7 +955,8 @@ class TopLevelCommand(object):
                 detached=detached,
                 remove_orphans=remove_orphans,
                 scale_override=parse_scale_args(options['--scale']),
-                start=not no_start
+                start=not no_start,
+                sequential_restart=sequential_restart
             )
 
             if detached or no_start:

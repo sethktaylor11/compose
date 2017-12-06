@@ -1,0 +1,7 @@
+services:
+    web:
+      image: busybox
+      command: top
+    db:
+      image: busybox
+      command: top

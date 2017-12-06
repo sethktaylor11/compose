@@ -816,6 +816,41 @@ class CLITestCase(DockerClientTestCase):
         self.assertFalse(container.get('Config.AttachStdout'))
         self.assertFalse(container.get('Config.AttachStdin'))
 
+    def test_up_sequential_restart(self):
+        self.base_dir = 'tests/fixtures/simple-dockerfile'
+        events_proc = start_process(self.base_dir, ['events', '--json'])
+
+        self.dispatch(['up', '-d', '--scale', 'simple=2'])
+        service = self.project.get_service('simple')
+        self.assertEqual(len(service.containers()), 2)
+
+        self.dispatch(['up', '-d', '--scale', 'simple=2', '--force-recreate', '--sequential-restart'])
+        os.kill(events_proc.pid, signal.SIGINT)
+        result = wait_on_process(events_proc, returncode=1)
+        lines = [json.loads(line) for line in result.stdout.rstrip().split('\n')]
+        create_actions = ['rename', 'create', 'start']
+        create_lines = [line for line in lines if line['action'] in create_actions]
+        startIndex = next(
+            (i for i, item in enumerate(create_lines) if item['action'] == 'rename'),
+            -1
+        )
+        assert len(create_lines) >= startIndex + 6
+        simple1Commands = create_lines[startIndex:startIndex+3]
+        simple2Commands = create_lines[startIndex+3:startIndex+6]
+        assert simple1Commands[0]['action'] == 'rename'
+        assert 'simpledockerfile_simple_1' in simple1Commands[0]['attributes']['name']
+        assert simple1Commands[1]['action'] == 'create'
+        assert simple1Commands[1]['attributes']['name'] == 'simpledockerfile_simple_1'
+        assert simple1Commands[2]['action'] == 'start'
+        assert simple1Commands[2]['attributes']['name'] == 'simpledockerfile_simple_1'
+
+        assert simple2Commands[0]['action'] == 'rename'
+        assert 'simpledockerfile_simple_2' in simple2Commands[0]['attributes']['name']
+        assert simple2Commands[1]['action'] == 'create'
+        assert simple2Commands[1]['attributes']['name'] == 'simpledockerfile_simple_2'
+        assert simple2Commands[2]['action'] == 'start'
+        assert simple2Commands[2]['attributes']['name'] == 'simpledockerfile_simple_2'
+
     def test_up_attached(self):
         self.base_dir = 'tests/fixtures/echo-services'
         result = self.dispatch(['up', '--no-color'])
