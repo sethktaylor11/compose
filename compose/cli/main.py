@@ -24,6 +24,7 @@ from ..bundle import MissingDigests
 from ..bundle import serialize_bundle
 from ..config import ConfigurationError
 from ..config import parse_environment
+from ..config import parse_labels
 from ..config import resolve_build_args
 from ..config.environment import Environment
 from ..config.serialize import serialize_config
@@ -232,6 +233,7 @@ class TopLevelCommand(object):
             --force-rm              Always remove intermediate containers.
             --no-cache              Do not use cache when building the image.
             --pull                  Always attempt to pull a newer version of the image.
+            -m, --memory MEM        Sets memory limit for the bulid container.
             --build-arg key=val     Set build-time variables for one service.
         """
         service_names = options['SERVICE']
@@ -248,6 +250,7 @@ class TopLevelCommand(object):
             no_cache=bool(options.get('--no-cache', False)),
             pull=bool(options.get('--pull', False)),
             force_rm=bool(options.get('--force-rm', False)),
+            memory=options.get('--memory'),
             build_args=build_args)
 
     def bundle(self, config_options, options):
@@ -362,18 +365,21 @@ class TopLevelCommand(object):
         Usage: down [options]
 
         Options:
-            --rmi type          Remove images. Type must be one of:
-                                'all': Remove all images used by any service.
-                                'local': Remove only images that don't have a custom tag
-                                set by the `image` field.
-            -v, --volumes       Remove named volumes declared in the `volumes` section
-                                of the Compose file and anonymous volumes
-                                attached to containers.
-            --remove-orphans    Remove containers for services not defined in the
-                                Compose file
+            --rmi type              Remove images. Type must be one of:
+                                      'all': Remove all images used by any service.
+                                      'local': Remove only images that don't have a
+                                      custom tag set by the `image` field.
+            -v, --volumes           Remove named volumes declared in the `volumes`
+                                    section of the Compose file and anonymous volumes
+                                    attached to containers.
+            --remove-orphans        Remove containers for services not defined in the
+                                    Compose file
+            -t, --timeout TIMEOUT   Specify a shutdown timeout in seconds.
+                                    (default: 10)
         """
         image_type = image_type_from_opt('--rmi', options['--rmi'])
-        self.project.down(image_type, options['--volumes'], options['--remove-orphans'])
+        timeout = timeout_from_opts(options)
+        self.project.down(image_type, options['--volumes'], options['--remove-orphans'], timeout=timeout)
 
     def events(self, options):
         """
@@ -720,7 +726,9 @@ class TopLevelCommand(object):
         running. If you do not want to start linked services, use
         `docker-compose run --no-deps SERVICE COMMAND [ARGS...]`.
 
-        Usage: run [options] [-v VOLUME...] [-p PORT...] [-e KEY=VAL...] SERVICE [COMMAND] [ARGS...]
+        Usage:
+            run [options] [-v VOLUME...] [-p PORT...] [-e KEY=VAL...] [-l KEY=VALUE...]
+                SERVICE [COMMAND] [ARGS...]
 
         Options:
             -d                    Detached mode: Run container in the background, print
@@ -728,6 +736,7 @@ class TopLevelCommand(object):
             --name NAME           Assign a name to the container
             --entrypoint CMD      Override the entrypoint of the image.
             -e KEY=VAL            Set an environment variable (can be used multiple times)
+            -l, --label KEY=VAL   Add or override a label (can be used multiple times)
             -u, --user=""         Run as specified username or uid
             --no-deps             Don't start linked services.
             --rm                  Remove container after run. Ignored in detached mode.
@@ -889,8 +898,8 @@ class TopLevelCommand(object):
 
         Options:
             -d                         Detached mode: Run containers in the background,
-                                       print new container names.
-                                       Incompatible with --abort-on-container-exit.
+                                       print new container names. Incompatible with
+                                       --abort-on-container-exit and --timeout.
             --no-color                 Produce monochrome output.
             --no-deps                  Don't start linked services.
             --force-recreate           Recreate containers even if their configuration
@@ -904,7 +913,8 @@ class TopLevelCommand(object):
             --abort-on-container-exit  Stops all containers if any container was stopped.
                                        Incompatible with -d.
             -t, --timeout TIMEOUT      Use this timeout in seconds for container shutdown
-                                       when attached or when containers are already
+                                       when attached or when containers are already.
+                                       Incompatible with -d.
                                        running. (default: 10)
             --remove-orphans           Remove containers for services not
                                        defined in the Compose file
@@ -924,6 +934,9 @@ class TopLevelCommand(object):
 
         if detached and (cascade_stop or exit_value_from):
             raise UserError("--abort-on-container-exit and -d cannot be combined.")
+
+        if detached and timeout:
+            raise UserError("-d and --timeout cannot be combined.")
 
         if no_start:
             for excluded in ['-d', '--abort-on-container-exit', '--exit-code-from']:
@@ -1121,6 +1134,9 @@ def build_container_options(options, detach, command):
         container_options['environment'] = Environment.from_command_line(
             parse_environment(options['-e'])
         )
+
+    if options['--label']:
+        container_options['labels'] = parse_labels(options['--label'])
 
     if options['--entrypoint']:
         container_options['entrypoint'] = options.get('--entrypoint')

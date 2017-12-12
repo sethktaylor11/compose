@@ -350,6 +350,22 @@ class CLITestCase(DockerClientTestCase):
             }
         }
 
+    def test_config_external_network_v3_5(self):
+        self.base_dir = 'tests/fixtures/networks'
+        result = self.dispatch(['-f', 'external-networks-v3-5.yml', 'config'])
+        json_result = yaml.load(result.stdout)
+        assert 'networks' in json_result
+        assert json_result['networks'] == {
+            'foo': {
+                'external': True,
+                'name': 'some_foo',
+            },
+            'bar': {
+                'external': True,
+                'name': 'some_bar',
+            },
+        }
+
     def test_config_v1(self):
         self.base_dir = 'tests/fixtures/v1-config'
         result = self.dispatch(['config'])
@@ -428,13 +444,21 @@ class CLITestCase(DockerClientTestCase):
                         'timeout': '1s',
                         'retries': 5,
                     },
-                    'volumes': [
-                        '/host/path:/container/path:ro',
-                        'foobar:/container/volumepath:rw',
-                        '/anonymous',
-                        'foobar:/container/volumepath2:nocopy'
-                    ],
-
+                    'volumes': [{
+                        'read_only': True,
+                        'source': '/host/path',
+                        'target': '/container/path',
+                        'type': 'bind'
+                    }, {
+                        'source': 'foobar', 'target': '/container/volumepath', 'type': 'volume'
+                    }, {
+                        'target': '/anonymous', 'type': 'volume'
+                    }, {
+                        'source': 'foobar',
+                        'target': '/container/volumepath2',
+                        'type': 'volume',
+                        'volume': {'nocopy': True}
+                    }],
                     'stop_grace_period': '20s',
                 },
             },
@@ -583,6 +607,12 @@ class CLITestCase(DockerClientTestCase):
         self.base_dir = 'tests/fixtures/build-shm-size'
         result = self.dispatch(['build', '--no-cache'], None)
         assert 'shm_size: 96' in result.stdout
+
+    def test_build_memory_build_option(self):
+        pull_busybox(self.client)
+        self.base_dir = 'tests/fixtures/build-memory'
+        result = self.dispatch(['build', '--no-cache', '--memory', '96m', 'service'], None)
+        assert 'memory: 100663296' in result.stdout  # 96 * 1024 * 1024
 
     def test_bundle_with_digests(self):
         self.base_dir = 'tests/fixtures/bundle-with-digests/'
@@ -775,6 +805,27 @@ class CLITestCase(DockerClientTestCase):
         assert 'Removing image busybox' not in result.stderr
         assert 'Removing network v2full_default' in result.stderr
         assert 'Removing network v2full_front' in result.stderr
+
+    def test_down_timeout(self):
+        self.dispatch(['up', '-d'], None)
+        service = self.project.get_service('simple')
+        self.assertEqual(len(service.containers()), 1)
+        self.assertTrue(service.containers()[0].is_running)
+        ""
+
+        self.dispatch(['down', '-t', '1'], None)
+
+        self.assertEqual(len(service.containers(stopped=True)), 0)
+
+    def test_down_signal(self):
+        self.base_dir = 'tests/fixtures/stop-signal-composefile'
+        self.dispatch(['up', '-d'], None)
+        service = self.project.get_service('simple')
+        self.assertEqual(len(service.containers()), 1)
+        self.assertTrue(service.containers()[0].is_running)
+
+        self.dispatch(['down', '-t', '1'], None)
+        self.assertEqual(len(service.containers(stopped=True)), 0)
 
     def test_up_detached(self):
         self.dispatch(['up', '-d'])
@@ -1280,18 +1331,9 @@ class CLITestCase(DockerClientTestCase):
             ['up', '-d', '--force-recreate', '--no-recreate'],
             returncode=1)
 
-    def test_up_with_timeout(self):
-        self.dispatch(['up', '-d', '-t', '1'])
-        service = self.project.get_service('simple')
-        another = self.project.get_service('another')
-        self.assertEqual(len(service.containers()), 1)
-        self.assertEqual(len(another.containers()), 1)
-
-        # Ensure containers don't have stdin and stdout connected in -d mode
-        config = service.containers()[0].inspect()['Config']
-        self.assertFalse(config['AttachStderr'])
-        self.assertFalse(config['AttachStdout'])
-        self.assertFalse(config['AttachStdin'])
+    def test_up_with_timeout_detached(self):
+        result = self.dispatch(['up', '-d', '-t', '1'], returncode=1)
+        assert "-d and --timeout cannot be combined." in result.stderr
 
     def test_up_handles_sigint(self):
         proc = start_process(self.base_dir, ['up', '-t', '2'])
@@ -1829,6 +1871,17 @@ class CLITestCase(DockerClientTestCase):
         environment = container.get('Config.Env')
         assert 'FOO=bar' in environment
         assert 'BAR=baz' not in environment
+
+    def test_run_label_flag(self):
+        self.base_dir = 'tests/fixtures/run-labels'
+        name = 'service'
+        self.dispatch(['run', '-l', 'default', '--label', 'foo=baz', name, '/bin/true'])
+        service = self.project.get_service(name)
+        container, = service.containers(stopped=True, one_off=OneOffFilter.only)
+        labels = container.labels
+        assert labels['default'] == ''
+        assert labels['foo'] == 'baz'
+        assert labels['hello'] == 'world'
 
     def test_rm(self):
         service = self.project.get_service('simple')

@@ -330,8 +330,8 @@ class Project(object):
             service_names, stopped=True, one_off=one_off
         ), options)
 
-    def down(self, remove_image_type, include_volumes, remove_orphans=False):
-        self.stop(one_off=OneOffFilter.include)
+    def down(self, remove_image_type, include_volumes, remove_orphans=False, timeout=None):
+        self.stop(one_off=OneOffFilter.include, timeout=timeout)
         self.find_orphan_containers(remove_orphans)
         self.remove_stopped(v=include_volumes, one_off=OneOffFilter.include)
 
@@ -357,10 +357,11 @@ class Project(object):
         )
         return containers
 
-    def build(self, service_names=None, no_cache=False, pull=False, force_rm=False, build_args=None):
+    def build(self, service_names=None, no_cache=False, pull=False, force_rm=False, memory=None,
+              build_args=None):
         for service in self.get_services(service_names):
             if service.can_be_built():
-                service.build(no_cache, pull, force_rm, build_args)
+                service.build(no_cache, pull, force_rm, memory, build_args)
             else:
                 log.info('%s uses an image, skipping' % service.name)
 
@@ -647,7 +648,7 @@ def get_secrets(service, service_secrets, secret_defs):
                 "Service \"{service}\" uses an undefined secret \"{secret}\" "
                 .format(service=service, secret=secret.source))
 
-        if secret_def.get('external_name'):
+        if secret_def.get('external'):
             log.warn("Service \"{service}\" uses secret \"{secret}\" which is external. "
                      "External secrets are not available to containers created by "
                      "docker-compose.".format(service=service, secret=secret.source))
