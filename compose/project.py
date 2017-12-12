@@ -63,7 +63,7 @@ class Project(object):
     """
     def __init__(self, name, services, client, networks=None, volumes=None, config_version=None):
         self.name = name
-        self.services.append(services)
+        self.services = services
         self.client = client
         self.volumes = volumes or ProjectVolumes({})
         self.networks = networks or ProjectNetworks({}, False)
