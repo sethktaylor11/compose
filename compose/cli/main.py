@@ -376,10 +376,13 @@ class TopLevelCommand(object):
                                     Compose file
             -t, --timeout TIMEOUT   Specify a shutdown timeout in seconds.
                                     (default: 10)
+            -w, --warn              Warn instead of throw an exception when network
+                                    removal fails
         """
         image_type = image_type_from_opt('--rmi', options['--rmi'])
         timeout = timeout_from_opts(options)
-        self.project.down(image_type, options['--volumes'], options['--remove-orphans'], timeout=timeout)
+        self.project.down(image_type, options['--volumes'], options['--remove-orphans'],
+                          options['--warn'], timeout=timeout)
 
     def events(self, options):
         """

@@ -88,7 +88,6 @@ class Project(object):
             use_networking)
         volumes = ProjectVolumes.from_config(name, config_data, client)
         project = cls(name, [], client, project_networks, volumes, config_data.version)
-
         for service_dict in config_data.services:
             service_dict = dict(service_dict)
             if use_networking:
@@ -114,7 +113,6 @@ class Project(object):
                 service_dict['name'],
                 service_dict.pop('secrets', None) or [],
                 config_data.secrets)
-
             project.services.append(
                 Service(
                     service_dict.pop('name'),
@@ -330,12 +328,19 @@ class Project(object):
             service_names, stopped=True, one_off=one_off
         ), options)
 
-    def down(self, remove_image_type, include_volumes, remove_orphans=False, timeout=None):
+    def down(self, remove_image_type, include_volumes, remove_orphans=False, warn=False, timeout=None):
         self.stop(one_off=OneOffFilter.include, timeout=timeout)
         self.find_orphan_containers(remove_orphans)
         self.remove_stopped(v=include_volumes, one_off=OneOffFilter.include)
 
-        self.networks.remove()
+        try:
+            self.networks.remove()
+        except APIError as err:
+            if warn:
+                s = err.__str__().split('"')[1]
+                log.warn(s)
+            else:
+                raise(err)
 
         if include_volumes:
             self.volumes.remove()
